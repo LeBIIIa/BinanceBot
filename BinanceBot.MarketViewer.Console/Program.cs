@@ -19,16 +19,13 @@ namespace BinanceBot.MarketViewer.Console
 {
     public class Program
     {
-        public static async Task Main(string[] args)
+        public static async Task Main(string[] _)
         {
             const string token = "ETHBTC";
 
             var host = new BootstrapConsole().AppStartup();
-            var binanceRestClient = ActivatorUtilities.CreateInstance<BinanceRestClient>(host.Services, new BinanceClientConfiguration
-            {
-                ApiKey = "<your_api_key>",
-                SecretKey = "<your_secret_key>"
-            });
+
+            var binanceRestClient = ActivatorUtilities.CreateInstance<BinanceRestClient>(host.Services);
 
             var marketDepth = new MarketDepth(token);
 
@@ -56,7 +53,7 @@ namespace BinanceBot.MarketViewer.Console
                 System.Console.SetCursorPosition(0, 0);
             };
 
-            var binanceWebSocket = ActivatorUtilities.CreateInstance<BinanceWebSocketClient>(host.Services, binanceRestClient);
+            var binanceWebSocket = ActivatorUtilities.CreateInstance<BinanceWebSocketClient>(host.Services);
             var marketDepthManager = ActivatorUtilities.CreateInstance<MarketDepthManager>(host.Services, binanceRestClient, binanceWebSocket);
 
             // build order book

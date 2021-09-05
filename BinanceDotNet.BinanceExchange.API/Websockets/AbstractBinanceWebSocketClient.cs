@@ -1,6 +1,5 @@
-﻿using BinanceExchange.API.Helpers;
-
-using BinanceExchange.API.Client;
+﻿using BinanceExchange.API.Client;
+using BinanceExchange.API.Helpers;
 using BinanceExchange.API.Models.WebSocket;
 using BinanceExchange.API.Models.WebSocket.Interfaces;
 using BinanceExchange.API.Utility;
@@ -22,7 +21,7 @@ namespace BinanceExchange.API.Websockets
     /// </summary>
     public abstract class AbstractBinanceWebSocketClient : IBinanceWebSocketClient
     {
-        private readonly IBinanceRestClient _binanceRestClient;
+        private bool disposedValue;
         private readonly ILogger<IBinanceWebSocketClient> _logger;
         private SslProtocols SupportedProtocols { get; } = SslProtocols.Tls12 | SslProtocols.Tls11 | SslProtocols.Tls;
 
@@ -30,18 +29,15 @@ namespace BinanceExchange.API.Websockets
         ///     Used for deletion on the fly
         /// </summary>
         protected Dictionary<Guid, BinanceWebSocket> ActiveWebSockets = new();
-
         protected List<BinanceWebSocket> AllSockets = new();
-        private bool disposedValue;
 
         /// <summary>
         ///     Base WebSocket URI for Binance API
         /// </summary>
         private readonly string BaseWebsocketUri = "wss://stream.binance.com:9443/ws";
 
-        protected AbstractBinanceWebSocketClient(ILogger<IBinanceWebSocketClient> logger, IBinanceRestClient binanceRestClient)
+        protected AbstractBinanceWebSocketClient(ILogger<IBinanceWebSocketClient> logger)
         {
-            _binanceRestClient = binanceRestClient ?? ThrowHelper.ArgumentNullException<IBinanceRestClient>(nameof(binanceRestClient));
             _logger = logger;
         }
 
@@ -130,21 +126,19 @@ namespace BinanceExchange.API.Websockets
             {
                 if (disposing)
                 {
-                    // TODO: dispose managed state (managed objects)
-                }
+                    AllSockets
+                        .ForEach(ws =>
+                        {
+                            if (ws.IsAlive) ws.Close(CloseStatusCode.Normal);
+                        });
 
-                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-                // TODO: set large fields to null
+                    AllSockets.Clear();
+                    ActiveWebSockets.Clear();
+                }
                 disposedValue = true;
             }
         }
 
-        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-        // ~AbstractBinanceWebSocketClient()
-        // {
-        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        //     Dispose(disposing: false);
-        // }
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method

@@ -13,9 +13,7 @@ namespace BinanceBot.Common
         {
             hostBuilder.ConfigureServices((context, services) =>
             {
-                services.AddTransient<IMarketBot, BaseMarketBot<IMarketStrategy>>();
                 services.AddTransient<IMarketBot, MarketMakerBot>();
-                services.AddTransient<IMarketBot, BaseMarketBot<NaiveMarketMakerStrategy>>();
             });
         }
     }

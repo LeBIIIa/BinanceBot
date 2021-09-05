@@ -1,9 +1,7 @@
-using BinanceExchange.API.Helpers;
-
 using BinanceExchange.API.Enums;
+using BinanceExchange.API.Helpers;
 using BinanceExchange.API.Models.Response.Error;
 
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 using Newtonsoft.Json;
@@ -20,28 +18,28 @@ namespace BinanceExchange.API.Client
     /// </summary>
     internal class APIProcessor : IAPIProcessor
     {
-        private readonly string _apiKey;
-        private readonly string _secretKey;
-        private TimeSpan _cacheTime;
+        private string _apiKey;
+        private string _secretKey;
         private readonly ILogger<IAPIProcessor> _logger;
         private readonly RequestClient _requestClient;
 
-        public APIProcessor(ILogger<IAPIProcessor> logger, RequestClient requestClient, string apiKey, string secretKey)
+        public APIProcessor(ILogger<IAPIProcessor> logger, RequestClient requestClient)
         {
-            _apiKey = apiKey;
-            _secretKey = secretKey;
-
             _logger = logger;
             _requestClient = requestClient;
+            _apiKey = "";
+            _secretKey = "";
         }
-
+        
         /// <summary>
-        ///     Set the cache expiry time
+        /// Set api & secret keys
         /// </summary>
-        /// <param name="time"></param>
-        public void SetCacheTime(TimeSpan time)
+        /// <param name="key"></param>
+        /// <param name="secretKey"></param>
+        public void SetAPIValues(string key, string secretKey)
         {
-            _cacheTime = time;
+            _apiKey = key;
+            _secretKey = secretKey;
         }
 
         /// <summary>
@@ -167,7 +165,7 @@ namespace BinanceExchange.API.Client
             return await HandleResponse<T>(message, endpoint.ToString(), fullKey);
         }
 
-        private async Task<T> HandleResponse<T>(HttpResponseMessage message, string requestMessage, string fullCacheKey)
+        private async Task<T> HandleResponse<T>(HttpResponseMessage message, string requestMessage, string _)
             where T : class
         {
             if (message.IsSuccessStatusCode)
@@ -199,14 +197,14 @@ namespace BinanceExchange.API.Client
 
             var errorJson = await message.Content.ReadAsStringAsync();
             var errorObject = JsonConvert.DeserializeObject<BinanceError>(errorJson);
-            if (errorObject == null) ThrowHelper.BinanceException("Unexpected Error whilst handling the response", null);
+            if (errorObject == null) ThrowHelper.BinanceException("Unexpected error while handling the response", null);
             errorObject.RequestMessage = requestMessage;
             var exception = CreateBinanceException(message.StatusCode, errorObject);
             _logger.LogError($"Error Message Received:{errorJson}", exception);
             throw exception;
         }
 
-        private BinanceException CreateBinanceException(HttpStatusCode statusCode, BinanceError errorObject)
+        private static BinanceException CreateBinanceException(HttpStatusCode statusCode, BinanceError errorObject)
         {
             if (statusCode == HttpStatusCode.GatewayTimeout) return new BinanceTimeoutException(errorObject);
             var parsedStatusCode = (int)statusCode;

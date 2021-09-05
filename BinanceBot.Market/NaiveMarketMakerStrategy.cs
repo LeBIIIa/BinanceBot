@@ -1,8 +1,6 @@
-﻿using BinanceExchange.API.Helpers;
+﻿using BinanceExchange.API.Enums;
+using BinanceExchange.API.Helpers;
 
-using BinanceExchange.API.Enums;
-
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace BinanceBot.Market
@@ -13,7 +11,6 @@ namespace BinanceBot.Market
     public class NaiveMarketMakerStrategy : IMarketStrategy
     {
         private readonly MarketStrategyConfiguration _marketStrategyConfig;
-
         private readonly ILogger<IMarketStrategy> _logger;
 
 

@@ -1,7 +1,11 @@
-﻿using BinanceExchange.API.Helpers;
+﻿using BinanceDotNet.BinanceExchange.API.Helpers;
 
 using BinanceExchange.API.Enums;
+using BinanceExchange.API.Helpers;
 using BinanceExchange.API.Models.Request;
+using BinanceExchange.API.Utility;
+
+using Microsoft.Extensions.Options;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -10,88 +14,96 @@ using Newtonsoft.Json.Serialization;
 using System;
 using System.Linq;
 using System.Net;
+using System.Reflection;
+using System.Text;
 
 namespace BinanceExchange.API.Client
 {
-    internal static class Endpoints
+    public class Endpoints
     {
-        private static readonly JsonSerializerSettings Settings = new()
-        {
-            Formatting = Formatting.Indented,
-            ContractResolver = new CamelCasePropertyNamesContractResolver(),
-            NullValueHandling = NullValueHandling.Ignore,
-            FloatParseHandling = FloatParseHandling.Decimal
-        };
-
         /// <summary>
         ///     Defaults to V1
         /// </summary>
         /// <summary>
         ///     Defaults to API binance domain (https)
         /// </summary>
-        private const string BaseUrl = "https://api.binance.com/api";
+        protected readonly string BaseUrl;
 
+        public Endpoints(IOptions<BinanceClientConfiguration> options)
+        {
+            Guard.AgainstNull(options);
+            Guard.AgainstNullOrEmpty(options.Value.BaseUrl);
+            BaseUrl = options.Value.BaseUrl;
+        }
 
-        private static string GenerateQueryStringFromData(IRequest request)
+        protected static string GenerateQueryStringFromData(IRequest request)
         {
             if (request == null) ThrowHelper.Exception("No request data provided - query string can't be created");
 
-            //TODO: Refactor to not require double JSON loop
-            var obj = (JObject)JsonConvert.DeserializeObject(JsonConvert.SerializeObject(request, Settings),
-                Settings)!;
+            StringBuilder sb = new();
+            PropertyInfo[] properties = request.GetType().GetProperties();
+            foreach(PropertyInfo p in properties)
+            {
+                object o = p.GetValue(request);
+                if (o != null)
+                {
+                    sb.Append(StringUtils.ToCamelCase(p.Name));
+                    sb.Append('=');
+                    sb.Append(WebUtility.UrlEncode(o.ToString()));
+                }
+            }
 
-            return string.Join("&", obj.Children()
-                .Cast<JProperty>()
-                .Where(j => j.Value != null)
-                .Select(j => j.Name + "=" + WebUtility.UrlEncode(j.Value.ToString())));
+            return sb.ToString();
         }
 
-
-        public static class General
+        public class General : Endpoints
         {
-            private static readonly string ApiVersion = "v1";
+            private static readonly string ApiVersion = "v3";
+
+            public General(IOptions<BinanceClientConfiguration> options) : base(options) { }
 
             /// <summary>
             ///     Test connectivity to the Rest API.
             /// </summary>
-            public static BinanceEndpointData TestConnectivity =>
+            public BinanceEndpointData TestConnectivity =>
                 new(new Uri($"{BaseUrl}/{ApiVersion}/ping"), EndpointSecurityType.None);
 
             /// <summary>
             ///     Test connectivity to the Rest API and get the current server time.
             /// </summary>
-            public static BinanceEndpointData ServerTime =>
+            public BinanceEndpointData ServerTime =>
                 new(new Uri($"{BaseUrl}/{ApiVersion}/time"), EndpointSecurityType.None);
 
             /// <summary>
             ///     Current exchange trading rules and symbol information.
             /// </summary>
-            public static BinanceEndpointData ExchangeInfo =>
+            public BinanceEndpointData ExchangeInfo =>
                 new(new Uri($"{BaseUrl}/{ApiVersion}/exchangeInfo"), EndpointSecurityType.None);
         }
 
-        public static class MarketData
+        public class MarketData : Endpoints
         {
             private static readonly string ApiVersion = "v1";
+            public MarketData(IOptions<BinanceClientConfiguration> options) : base(options) { }
 
             /// <summary>
             ///     Latest price for all symbols.
             /// </summary>
-            public static BinanceEndpointData AllSymbolsPriceTicker =>
+            public BinanceEndpointData AllSymbolsPriceTicker =>
                 new(new Uri($"{BaseUrl}/{ApiVersion}/ticker/allPrices"),
                     EndpointSecurityType.ApiKey);
 
             /// <summary>
             ///     Best price/qty on the order book for all symbols.
             /// </summary>
-            public static BinanceEndpointData SymbolsOrderBookTicker =>
+            public BinanceEndpointData SymbolsOrderBookTicker =>
                 new(new Uri($"{BaseUrl}/{ApiVersion}/ticker/allBookTickers"),
                     EndpointSecurityType.ApiKey);
 
             /// <summary>
             ///     Gets the order book with all bids and asks
             /// </summary>
-            public static BinanceEndpointData OrderBook(string symbol, int limit, bool useCache = false)
+            public BinanceEndpointData OrderBook(string symbol, int limit, bool useCache = false)
             {
                 return new(new Uri($"{BaseUrl}/{ApiVersion}/depth?symbol={symbol}&limit={limit}"),
                     EndpointSecurityType.None, useCache);
@@ -99,18 +111,20 @@ namespace BinanceExchange.API.Client
 
         }
 
-        public static class Account
+        public class Account : Endpoints
         {
             private static readonly string ApiVersion = "v3";
 
-            public static BinanceEndpointData NewOrder(CreateOrderRequest request)
+            public Account(IOptions<BinanceClientConfiguration> options) : base(options) { }
+
+            public BinanceEndpointData NewOrder(CreateOrderRequest request)
             {
                 var queryString = GenerateQueryStringFromData(request);
                 return new(new Uri($"{BaseUrl}/{ApiVersion}/order?{queryString}"),
                     EndpointSecurityType.Signed);
             }
 
-            public static BinanceEndpointData NewOrderTest(CreateOrderRequest request)
+            public BinanceEndpointData NewOrderTest(CreateOrderRequest request)
             {
                 var queryString = GenerateQueryStringFromData(request);
                 return new(new Uri($"{BaseUrl}/{ApiVersion}/order/test?{queryString}"),
@@ -118,14 +132,14 @@ namespace BinanceExchange.API.Client
             }
 
 
-            public static BinanceEndpointData CancelOrder(CancelOrderRequest request)
+            public BinanceEndpointData CancelOrder(CancelOrderRequest request)
             {
                 var queryString = GenerateQueryStringFromData(request);
                 return new(new Uri($"{BaseUrl}/{ApiVersion}/order?{queryString}"),
                     EndpointSecurityType.Signed);
             }
 
-            public static BinanceEndpointData CurrentOpenOrders(CurrentOpenOrdersRequest request)
+            public BinanceEndpointData CurrentOpenOrders(CurrentOpenOrdersRequest request)
             {
                 var queryString = GenerateQueryStringFromData(request);
                 return new(new Uri($"{BaseUrl}/{ApiVersion}/openOrders?{queryString}"),

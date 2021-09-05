@@ -1,6 +1,5 @@
-﻿using BinanceExchange.API.Helpers;
-
-using BinanceExchange.API.Client;
+﻿using BinanceExchange.API.Client;
+using BinanceExchange.API.Helpers;
 using BinanceExchange.API.Models.Response;
 using BinanceExchange.API.Websockets;
 

@@ -1,8 +1,7 @@
 ﻿using BinanceBot.Market.Utility;
 
-using BinanceExchange.API.Helpers;
-
 using BinanceExchange.API.Enums;
+using BinanceExchange.API.Helpers;
 using BinanceExchange.API.Models.Response;
 
 using System;

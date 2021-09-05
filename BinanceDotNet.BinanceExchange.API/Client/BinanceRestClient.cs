@@ -1,15 +1,16 @@
-﻿using BinanceExchange.API.Helpers;
-
-using BinanceExchange.API.Enums;
+﻿using BinanceExchange.API.Enums;
+using BinanceExchange.API.Helpers;
 using BinanceExchange.API.Models.Request;
 using BinanceExchange.API.Models.Response;
 using BinanceExchange.API.Utility;
 
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+
+using static BinanceExchange.API.Client.Endpoints;
 
 namespace BinanceExchange.API.Client
 {
@@ -21,6 +22,9 @@ namespace BinanceExchange.API.Client
     {
         private readonly ILogger<IBinanceRestClient> _logger;
         private readonly IAPIProcessor _apiProcessor;
+        private readonly MarketData _marketData;
+        private readonly General _general;
+        private readonly Account _account;
         private readonly int _defaultReceiveWindow;
 
         /// <summary>
@@ -32,21 +36,28 @@ namespace BinanceExchange.API.Client
         public BinanceRestClient(ILogger<IBinanceRestClient> logger,
                 RequestClient requestClient,
                 IAPIProcessor apiProcessor,
-                BinanceClientConfiguration configuration)
+                IOptions<BinanceClientConfiguration> configuration,
+                General general,
+                MarketData marketData,
+                Account account)
         {
             Guard.AgainstNull(configuration);
-            Guard.AgainstNullOrEmpty(configuration.ApiKey);
-            Guard.AgainstNull(configuration.SecretKey);
+            Guard.AgainstNullOrEmpty(configuration.Value.ApiKey);
+            Guard.AgainstNull(configuration.Value.SecretKey);
 
-            _defaultReceiveWindow = configuration.DefaultReceiveWindow;
-            string apiKey = configuration.ApiKey!;
-            string secretKey = configuration.SecretKey!;
-            requestClient.SetTimestampOffset(configuration.TimestampOffset);
-            requestClient.SetRateLimiting(configuration.EnableRateLimiting);
+            string apiKey = configuration.Value.ApiKey;
+            string secretKey = configuration.Value.SecretKey;
+            _defaultReceiveWindow = configuration.Value.DefaultReceiveWindow;
+            requestClient.SetTimestampOffset(configuration.Value.TimestampOffset);
+            requestClient.SetRateLimiting(configuration.Value.EnableRateLimiting);
             requestClient.SetAPIKey(apiKey);
+            requestClient.SetCacheTime(configuration.Value.CacheTime);
             _apiProcessor = apiProcessor;
-            _apiProcessor.SetCacheTime(configuration.CacheTime);
+            _apiProcessor.SetAPIValues(apiKey, secretKey);
             _logger = logger;
+            _marketData = marketData;
+            _general = general;
+            _account = account;
         }
 
         #region Market Data
@@ -65,7 +76,7 @@ namespace BinanceExchange.API.Client
                 ThrowHelper.ArgumentException(
                     "When requesting the order book, you can't request more than 100 at a time.", nameof(limit));
             return await _apiProcessor.ProcessGetRequest<OrderBookResponse>(
-                Endpoints.MarketData.OrderBook(symbol, limit, useCache));
+                _marketData.OrderBook(symbol, limit, useCache));
         }
 
         #endregion
@@ -85,7 +96,7 @@ namespace BinanceExchange.API.Client
         /// </summary>
         public async Task<EmptyResponse> TestConnectivityAsync()
         {
-            return await _apiProcessor.ProcessGetRequest<EmptyResponse>(Endpoints.General.TestConnectivity);
+            return await _apiProcessor.ProcessGetRequest<EmptyResponse>(_general.TestConnectivity);
         }
 
         /// <summary>
@@ -96,7 +107,7 @@ namespace BinanceExchange.API.Client
         /// </returns>
         public async Task<ServerTimeResponse> GetServerTimeAsync()
         {
-            return await _apiProcessor.ProcessGetRequest<ServerTimeResponse>(Endpoints.General.ServerTime);
+            return await _apiProcessor.ProcessGetRequest<ServerTimeResponse>(_general.ServerTime);
         }
 
         #endregion
@@ -121,11 +132,11 @@ namespace BinanceExchange.API.Client
             return request.NewOrderResponseType switch
             {
                 NewOrderResponseType.Acknowledge => await _apiProcessor.ProcessPostRequest<AcknowledgeCreateOrderResponse>(
-                                        Endpoints.Account.NewOrder(request)),
+                                        _account.NewOrder(request)),
                 NewOrderResponseType.Full => await _apiProcessor.ProcessPostRequest<FullCreateOrderResponse>(
-                                        Endpoints.Account.NewOrder(request)),
+                                        _account.NewOrder(request)),
                 _ => await _apiProcessor.ProcessPostRequest<ResultCreateOrderResponse>(
-                                        Endpoints.Account.NewOrder(request)),
+                                        _account.NewOrder(request)),
             };
         }
 
@@ -141,7 +152,7 @@ namespace BinanceExchange.API.Client
             Guard.AgainstNull(request.Type);
             Guard.AgainstNull(request.Quantity);
 
-            return await _apiProcessor.ProcessPostRequest<EmptyResponse>(Endpoints.Account.NewOrderTest(request));
+            return await _apiProcessor.ProcessPostRequest<EmptyResponse>(_account.NewOrderTest(request));
         }
 
         /// <summary>
@@ -155,7 +166,7 @@ namespace BinanceExchange.API.Client
             receiveWindow = SetReceiveWindow(receiveWindow);
             Guard.AgainstNull(request.Symbol);
 
-            return await _apiProcessor.ProcessDeleteRequest<CancelOrderResponse>(Endpoints.Account.CancelOrder(request),
+            return await _apiProcessor.ProcessDeleteRequest<CancelOrderResponse>(_account.CancelOrder(request),
                 receiveWindow);
         }
 
@@ -170,7 +181,7 @@ namespace BinanceExchange.API.Client
         {
             receiveWindow = SetReceiveWindow(receiveWindow);
             return await _apiProcessor.ProcessGetRequest<List<OrderResponse>>(
-                Endpoints.Account.CurrentOpenOrders(request), receiveWindow);
+                _account.CurrentOpenOrders(request), receiveWindow);
         }
 
         #endregion

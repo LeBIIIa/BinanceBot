@@ -1,10 +1,9 @@
 ﻿// Create test order flag. See more: https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md#test-new-order-trade 
 #define TEST_ORDER_CREATION_MODE 
 
-using BinanceExchange.API.Helpers;
-
 using BinanceExchange.API.Client;
 using BinanceExchange.API.Enums;
+using BinanceExchange.API.Helpers;
 using BinanceExchange.API.Models.Request;
 using BinanceExchange.API.Models.Response;
 using BinanceExchange.API.Websockets;
@@ -95,8 +94,6 @@ namespace BinanceBot.Market
             return await _binanceRestClient.CreateOrderAsync(order);
 #endif
         }
-
-
 
         #region Run bot section
         public override async Task RunAsync()

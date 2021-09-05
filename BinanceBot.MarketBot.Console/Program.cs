@@ -13,17 +13,13 @@ namespace BinanceBot.MarketBot.Console
 {
     public class Program
     {
-        public static async Task Main(string[] args)
+        public static async Task Main(string[] _)
         {
             // set bot settings
             const string token = "ETHBTC";
 
             var host = new BootstrapConsole().AppStartup();
-            var binanceRestClient = ActivatorUtilities.CreateInstance<BinanceRestClient>(host.Services, new BinanceClientConfiguration
-            {
-                ApiKey = "<your_api_key>",
-                SecretKey = "<your_secret_key>"
-            });
+            var binanceRestClient = ActivatorUtilities.CreateInstance<BinanceRestClient>(host.Services);
 
             var strategyConfig = new MarketStrategyConfiguration
             {

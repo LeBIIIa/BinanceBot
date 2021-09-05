@@ -17,22 +17,28 @@ namespace BinanceExchange.API.Websockets
     /// </summary>
     public class BinanceWebSocketClient : AbstractBinanceWebSocketClient, IBinanceWebSocketClient
     {
-        public BinanceWebSocketClient(ILogger<IBinanceWebSocketClient> logger, IBinanceRestClient binanceRestClient) :
-            base(logger, binanceRestClient)
+        private bool disposedValue;
+
+        public BinanceWebSocketClient(ILogger<IBinanceWebSocketClient> logger) :
+            base(logger)
         { }
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
+            if (!disposedValue)
             {
-                AllSockets
-                    .ForEach(ws =>
-                    {
-                        if (ws.IsAlive) ws.Close(CloseStatusCode.Normal);
-                    });
+                if (disposing)
+                {
+                    AllSockets
+                        .ForEach(ws =>
+                        {
+                            if (ws.IsAlive) ws.Close(CloseStatusCode.Normal);
+                        });
 
-                AllSockets = new List<BinanceWebSocket>();
-                ActiveWebSockets = new Dictionary<Guid, BinanceWebSocket>();
+                    AllSockets.Clear();
+                    ActiveWebSockets.Clear();
+                }
+                disposedValue = true;
             }
         }
     }

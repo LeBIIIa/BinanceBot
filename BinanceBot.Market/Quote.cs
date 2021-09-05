@@ -1,6 +1,5 @@
-﻿using BinanceExchange.API.Helpers;
-
-using BinanceExchange.API.Enums;
+﻿using BinanceExchange.API.Enums;
+using BinanceExchange.API.Helpers;
 
 namespace BinanceBot.Market
 {

@@ -4,11 +4,14 @@ using BinanceExchange.API.Websockets;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 using Serilog;
 
 using System;
 using System.IO;
+
+using static BinanceExchange.API.Client.Endpoints;
 
 namespace BinanceExchange.API.Helpers
 {
@@ -20,12 +23,15 @@ namespace BinanceExchange.API.Helpers
             var host = Host.CreateDefaultBuilder()
                 .ConfigureServices((context, services) =>
                     {
+                        services.Configure<BinanceClientConfiguration>(configuration.GetSection("BinanceConfiguration"));
                         services.AddSingleton(configuration);
                         services.AddSingleton(RequestClient.GetInstance(Log.Logger));
-                        services.AddTransient<IBinanceRestClient, BinanceRestClient>();
-                        services.AddTransient<IBinanceWebSocketClient, AbstractBinanceWebSocketClient>();
-                        services.AddTransient<IBinanceWebSocketClient, BinanceWebSocketClient>();
-                        services.AddTransient<IAPIProcessor, APIProcessor>();
+                        services.AddSingleton(provider => new General(provider.GetService<IOptions<BinanceClientConfiguration>>()!));
+                        services.AddSingleton(provider => new MarketData(provider.GetService<IOptions<BinanceClientConfiguration>>()!));
+                        services.AddSingleton(provider => new Account(provider.GetService<IOptions<BinanceClientConfiguration>>()!));
+                        services.AddScoped<IAPIProcessor, APIProcessor>();
+                        services.AddScoped<IBinanceRestClient, BinanceRestClient>();
+                        services.AddScoped<IBinanceWebSocketClient, BinanceWebSocketClient>();
                     });
             AdditionalServices(host);
 
@@ -40,18 +46,14 @@ namespace BinanceExchange.API.Helpers
             // defining Serilog configs
             Log.Logger = new LoggerConfiguration()
                 .ReadFrom.Configuration(configuration)
-                .Enrich.FromLogContext()
-                .WriteTo.Console()
                 .CreateLogger();
 
-            // Initiated the denpendency injection container 
-            var host = ConfigureServices(configuration).UseSerilog().Build();
-
-            return host;
+            // Initiated the denpendency injection container
+            return ConfigureServices(configuration).UseSerilog().Build();
         }
         static void ConfigSetup(IConfigurationBuilder builder)
         {
-            var environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            var environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_Environment");
             builder.SetBasePath(Directory.GetCurrentDirectory())
                     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                     .AddJsonFile($"appsettings.{environmentName}.json", optional: true, reloadOnChange: true)

@@ -6,10 +6,11 @@ namespace BinanceExchange.API.Client
     public interface IAPIProcessor
     {
         /// <summary>
-        ///     Set the cache expiry time
+        /// Set api & secret keys
         /// </summary>
-        /// <param name="time"></param>
-        void SetCacheTime(TimeSpan time);
+        /// <param name="key"></param>
+        /// <param name="secretKey"></param>
+        void SetAPIValues(string key, string secretKey);
 
         /// <summary>
         ///     Processes a GET request

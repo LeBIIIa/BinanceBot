@@ -1,12 +1,6 @@
-﻿using BinanceExchange.API.Helpers;
-
-using BinanceExchange.API.Enums;
+﻿using BinanceExchange.API.Enums;
 using BinanceExchange.API.Extensions;
-
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-
-using Serilog;
+using BinanceExchange.API.Helpers;
 
 using System;
 using System.Diagnostics;
@@ -24,25 +18,27 @@ namespace BinanceExchange.API.Client
     {
         private static RequestClient? requestClient = null;
 
-        private const string APIHeader = "X-MBX-APIKEY";
-        private static readonly HttpClient HttpClient;
-        private static readonly SemaphoreSlim _rateSemaphore;
-        private static readonly int _limit = 10;
+        private readonly string APIHeader = "X-MBX-APIKEY";
+        private readonly HttpClient HttpClient;
+        private readonly SemaphoreSlim _rateSemaphore;
+        private const int _limit = 10;
 
         /// <summary>
         ///     Number of seconds the for the Limit of requests (10 seconds for 10 requests etc)
         /// </summary>
-        private static readonly int SecondsLimit = 10;
+        private const int SecondsLimit = 10;
 
-        private static bool RateLimitingEnabled;
-        private static readonly Stopwatch Stopwatch;
-        private static int _concurrentRequests;
-        private static TimeSpan _timestampOffset;
-        private static readonly object LockObject = new();
+        private bool RateLimitingEnabled;
+        private readonly Stopwatch Stopwatch;
+        private int _concurrentRequests;
+        private TimeSpan _timestampOffset;
+        private TimeSpan _cacheTime;
+
+        private readonly object LockObject = new();
 
         private readonly Serilog.ILogger _logger;
 
-        static RequestClient()
+        protected internal RequestClient(Serilog.ILogger logger)
         {
             var httpClientHandler = new HttpClientHandler
             {
@@ -52,9 +48,6 @@ namespace BinanceExchange.API.Client
             HttpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             _rateSemaphore = new SemaphoreSlim(_limit, _limit);
             Stopwatch = new Stopwatch();
-        }
-        protected internal RequestClient(Serilog.ILogger logger)
-        {
             _logger = logger;
         }
 
@@ -75,6 +68,16 @@ namespace BinanceExchange.API.Client
         {
             _timestampOffset = time;
             _logger.Debug($"Timestamp offset is now : {time}");
+        }
+        
+        /// <summary>
+        ///     Set the cache expiry time
+        /// </summary>
+        /// <param name="time"></param>
+        public void SetCacheTime(TimeSpan time)
+        {
+            _cacheTime = time;
+            HttpClient.DefaultRequestHeaders.CacheControl = new CacheControlHeaderValue() { NoCache = false, MaxAge = _cacheTime };
         }
 
         /// <summary>
@@ -124,7 +127,7 @@ namespace BinanceExchange.API.Client
         /// <param name="signatureRawData"></param>
         /// <param name="receiveWindow"></param>
         /// <returns></returns>
-        public async Task<HttpResponseMessage> SignedGetRequest(Uri endpoint, string apiKey, string secretKey,
+        public async Task<HttpResponseMessage> SignedGetRequest(Uri endpoint, string _, string secretKey,
             string signatureRawData, long receiveWindow = 5000)
         {
             _logger.Debug($"Creating a SIGNED GET Request to {endpoint.AbsoluteUri}");
@@ -175,7 +178,7 @@ namespace BinanceExchange.API.Client
         /// <param name="signatureRawData"></param>
         /// <param name="receiveWindow"></param>
         /// <returns></returns>
-        public async Task<HttpResponseMessage> SignedPostRequest(Uri endpoint, string apiKey, string secretKey,
+        public async Task<HttpResponseMessage> SignedPostRequest(Uri endpoint, string _, string secretKey,
             string signatureRawData, long receiveWindow = 5000)
         {
             _logger.Debug($"Creating a SIGNED POST Request to {endpoint.AbsoluteUri}");
@@ -192,7 +195,7 @@ namespace BinanceExchange.API.Client
         /// <param name="signatureRawData"></param>
         /// <param name="receiveWindow"></param>
         /// <returns></returns>
-        public async Task<HttpResponseMessage> SignedDeleteRequest(Uri endpoint, string apiKey, string secretKey,
+        public async Task<HttpResponseMessage> SignedDeleteRequest(Uri endpoint, string _, string secretKey,
             string signatureRawData, long receiveWindow = 5000)
         {
             _logger.Debug($"Creating a SIGNED DELETE Request to {endpoint.AbsoluteUri}");
@@ -219,7 +222,7 @@ namespace BinanceExchange.API.Client
             var qsDataProvided = !string.IsNullOrEmpty(signatureRawData);
             var argEnding = $"timestamp={timestamp}&recvWindow={receiveWindow}";
             var adjustedSignature = !string.IsNullOrEmpty(signatureRawData)
-                ? $"{signatureRawData.Substring(1)}&{argEnding}"
+                ? $"{signatureRawData[1..]}&{argEnding}"
                 : $"{argEnding}";
             var hmacResult = CreateHMACSignature(secretKey, adjustedSignature);
             var connector = !qsDataProvided ? "?" : "&";
@@ -233,7 +236,7 @@ namespace BinanceExchange.API.Client
         /// <param name="key">The secret key</param>
         /// <param name="totalParams">URL Encoded values that would usually be the query string for the request</param>
         /// <returns></returns>
-        private string CreateHMACSignature(string key, string totalParams)
+        private static string CreateHMACSignature(string key, string totalParams)
         {
             var messageBytes = Encoding.UTF8.GetBytes(totalParams);
             var keyBytes = Encoding.UTF8.GetBytes(key);
@@ -277,6 +280,7 @@ namespace BinanceExchange.API.Client
                 --_concurrentRequests;
                 return t;
             });
+
             switch (verb)
             {
                 case HttpVerb.GET:
