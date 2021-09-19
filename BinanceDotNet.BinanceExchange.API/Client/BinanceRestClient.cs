@@ -4,7 +4,6 @@ using BinanceExchange.API.Models.Request;
 using BinanceExchange.API.Models.Response;
 using BinanceExchange.API.Utility;
 
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using System.Collections.Generic;
@@ -20,7 +19,6 @@ namespace BinanceExchange.API.Client
     /// <see href="https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md"/>
     public class BinanceRestClient : IBinanceRestClient
     {
-        private readonly ILogger<IBinanceRestClient> _logger;
         private readonly IAPIProcessor _apiProcessor;
         private readonly MarketData _marketData;
         private readonly General _general;
@@ -33,7 +31,7 @@ namespace BinanceExchange.API.Client
         /// <param name="configuration"></param>
         /// <param name="apiProcessor"></param>
         /// <param name="logger"></param>
-        public BinanceRestClient(ILogger<IBinanceRestClient> logger,
+        public BinanceRestClient(
                 RequestClient requestClient,
                 IAPIProcessor apiProcessor,
                 IOptions<BinanceClientConfiguration> configuration,
@@ -54,7 +52,6 @@ namespace BinanceExchange.API.Client
             requestClient.SetCacheTime(configuration.Value.CacheTime);
             _apiProcessor = apiProcessor;
             _apiProcessor.SetAPIValues(apiKey, secretKey);
-            _logger = logger;
             _marketData = marketData;
             _general = general;
             _account = account;

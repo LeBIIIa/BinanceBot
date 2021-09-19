@@ -17,7 +17,7 @@ namespace BinanceExchange.API.Helpers
 {
     public abstract class Bootstrap
     {
-        public abstract void AdditionalServices(IHostBuilder hostBuilder);
+        public abstract void AdditionalServices(IHostBuilder hostBuilder, IConfiguration configuration);
         public IHostBuilder ConfigureServices(IConfiguration configuration)
         {
             var host = Host.CreateDefaultBuilder()
@@ -33,7 +33,7 @@ namespace BinanceExchange.API.Helpers
                         services.AddScoped<IBinanceRestClient, BinanceRestClient>();
                         services.AddScoped<IBinanceWebSocketClient, BinanceWebSocketClient>();
                     });
-            AdditionalServices(host);
+            AdditionalServices(host, configuration);
 
             return host;
         }

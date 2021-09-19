@@ -15,24 +15,13 @@ namespace BinanceBot.MarketBot.Console
     {
         public static async Task Main(string[] _)
         {
-            // set bot settings
-            const string token = "ETHBTC";
-
             var host = new BootstrapConsole().AppStartup();
-            var binanceRestClient = ActivatorUtilities.CreateInstance<BinanceRestClient>(host.Services);
-
-            var strategyConfig = new MarketStrategyConfiguration
-            {
-                MinOrderVolume = 1.0M,
-                MaxOrderVolume = 50.0M,
-                TradeWhenSpreadGreaterThan = .02M
-            };
-
+            BinanceRestClient binanceRestClient = ActivatorUtilities.CreateInstance<BinanceRestClient>(host.Services);
 
             // create bot
-            NaiveMarketMakerStrategy mms = ActivatorUtilities.CreateInstance<NaiveMarketMakerStrategy>(host.Services, strategyConfig);
+            NaiveMarketMakerStrategy mms = ActivatorUtilities.CreateInstance<NaiveMarketMakerStrategy>(host.Services);
             BinanceWebSocketClient binanceWebSocket = ActivatorUtilities.CreateInstance<BinanceWebSocketClient>(host.Services, binanceRestClient);
-            MarketMakerBot bot = ActivatorUtilities.CreateInstance<MarketMakerBot>(host.Services, token, mms, binanceRestClient, binanceWebSocket);
+            MarketMakerBot bot = ActivatorUtilities.CreateInstance<MarketMakerBot>(host.Services, mms, binanceRestClient, binanceWebSocket);
 
             // start bot
             try

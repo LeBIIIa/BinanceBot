@@ -7,12 +7,7 @@ using BinanceExchange.API.Utility;
 
 using Microsoft.Extensions.Options;
 
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
-
 using System;
-using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -42,14 +37,15 @@ namespace BinanceExchange.API.Client
 
             StringBuilder sb = new();
             PropertyInfo[] properties = request.GetType().GetProperties();
-            foreach(PropertyInfo p in properties)
+            foreach (PropertyInfo p in properties)
             {
-                object o = p.GetValue(request);
+                object? o = p.GetValue(request);
                 if (o != null)
                 {
                     sb.Append(StringUtils.ToCamelCase(p.Name));
                     sb.Append('=');
                     sb.Append(WebUtility.UrlEncode(o.ToString()));
+                    sb.Append('&');
                 }
             }
 
@@ -83,7 +79,7 @@ namespace BinanceExchange.API.Client
 
         public class MarketData : Endpoints
         {
-            private static readonly string ApiVersion = "v1";
+            private static readonly string ApiVersion = "v3";
             public MarketData(IOptions<BinanceClientConfiguration> options) : base(options) { }
 
             /// <summary>

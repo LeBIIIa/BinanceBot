@@ -27,7 +27,6 @@ namespace BinanceBot.Market
         private readonly IBinanceWebSocketClient _webSocketClient;
         private readonly MarketDepth _marketDepth;
 
-
         /// <param name="symbol"></param>
         /// <param name="marketStrategy"></param>
         /// <param name="webSocketClient"></param>
@@ -37,6 +36,20 @@ namespace BinanceBot.Market
         /// <exception cref="ArgumentNullException"><paramref name="marketStrategy"/> cannot be <see langword="null"/></exception>
         /// <exception cref="ArgumentNullException"><paramref name="webSocketClient"/> cannot be <see langword="null"/></exception>
         /// <exception cref="ArgumentNullException"><paramref name="binanceRestClient"/> cannot be <see langword="null"/></exception>
+        public MarketMakerBot(
+            ILogger<BaseMarketBot<NaiveMarketMakerStrategy>> logger,
+            IConfiguration config,
+            NaiveMarketMakerStrategy marketStrategy,
+            IBinanceRestClient binanceRestClient,
+            IBinanceWebSocketClient webSocketClient) :
+            base(logger, config, marketStrategy)
+        {
+            string symbol = config["CommonSettings:Symbol"];
+            _marketDepth = new MarketDepth(symbol);
+            _binanceRestClient = binanceRestClient ?? ThrowHelper.ArgumentNullException<IBinanceRestClient>(nameof(binanceRestClient));
+            _webSocketClient = webSocketClient ?? ThrowHelper.ArgumentNullException<IBinanceWebSocketClient>(nameof(webSocketClient));
+        }
+
         public MarketMakerBot(
             ILogger<BaseMarketBot<NaiveMarketMakerStrategy>> logger,
             IConfiguration config,
@@ -51,8 +64,6 @@ namespace BinanceBot.Market
             _webSocketClient = webSocketClient ?? ThrowHelper.ArgumentNullException<IBinanceWebSocketClient>(nameof(webSocketClient));
         }
 
-
-
         public override async Task ValidateConnectionAsync()
         {
             Logger.LogInformation("Testing connection...");
@@ -64,8 +75,7 @@ namespace BinanceBot.Market
             }
         }
 
-
-        public override async Task<IEnumerable<OrderResponse>> GetOpenedOrdersAsync(string symbol)
+        public override async Task<List<OrderResponse>> GetOpenedOrdersAsync(string symbol)
         {
             if (string.IsNullOrEmpty(symbol))
                 ThrowHelper.ArgumentException("Invalid symbol value", nameof(symbol));
@@ -73,8 +83,7 @@ namespace BinanceBot.Market
             return await _binanceRestClient.GetCurrentOpenOrdersAsync(new CurrentOpenOrdersRequest { Symbol = symbol });
         }
 
-
-        public override async Task CancelOrdersAsync(IEnumerable<OrderResponse> orders)
+        public override async Task CancelOrdersAsync(List<OrderResponse> orders)
         {
             if (orders == null)
                 ThrowHelper.ArgumentNullException(nameof(orders));
@@ -83,8 +92,7 @@ namespace BinanceBot.Market
                 await _binanceRestClient.CancelOrderAsync(new CancelOrderRequest { OrderId = order.OrderId, OriginalClientOrderId = order.ClientOrderId, Symbol = order.Symbol });
         }
 
-
-        public override async Task<BaseCreateOrderResponse> CreateOrderAsync(CreateOrderRequest order)
+        public override async Task<BaseCreateOrderResponse?> CreateOrderAsync(CreateOrderRequest order)
         {
 
 #if TEST_ORDER_CREATION_MODE
@@ -113,20 +121,19 @@ namespace BinanceBot.Market
             marketDepthManager.StreamUpdates(_marketDepth);
         }
 
-
-        private async Task OnMarketBestPairChanged(object sender, MarketBestPairChangedEventArgs e)
+        private async Task OnMarketBestPairChanged(object? sender, MarketBestPairChangedEventArgs e)
         {
             if (e == null)
                 ThrowHelper.ArgumentNullException(nameof(e));
 
             //  get current opened orders by token
-            var openOrdersResponse = await GetOpenedOrdersAsync(Symbol);
+            List<OrderResponse> openOrdersResponse = await GetOpenedOrdersAsync(Symbol);
 
             // cancel already opened orders (if necessary)
             await CancelOrdersAsync(openOrdersResponse);
 
             // find new market position
-            Quote q = MarketStrategy.Process(e.MarketBestPair);
+            Quote? q = MarketStrategy.Process(e.MarketBestPair);
             // if position found then create order 
             if (q != null)
             {
@@ -147,7 +154,6 @@ namespace BinanceBot.Market
             Console.WriteLine(Environment.NewLine); // only for beauty console output purposes
         }
         #endregion
-
 
         #region Stop/dispose bot section
         public override void Stop()

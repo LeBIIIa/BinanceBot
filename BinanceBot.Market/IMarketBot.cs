@@ -38,18 +38,18 @@ namespace BinanceBot.Market
         /// Get currently opened orders
         /// </summary>
         /// <param name="symbol"></param>
-        Task<IEnumerable<OrderResponse>> GetOpenedOrdersAsync(string symbol);
+        Task<List<OrderResponse>> GetOpenedOrdersAsync(string symbol);
 
         /// <summary>
         /// Create new order
         /// </summary>
         /// <param name="order"></param>
-        Task<BaseCreateOrderResponse> CreateOrderAsync(CreateOrderRequest order);
+        Task<BaseCreateOrderResponse?> CreateOrderAsync(CreateOrderRequest order);
 
         /// <summary>
         /// Cancel orders
         /// </summary>
         /// <param name="orders"></param>
-        Task CancelOrdersAsync(IEnumerable<OrderResponse> orders);
+        Task CancelOrdersAsync(List<OrderResponse> orders);
     }
 }

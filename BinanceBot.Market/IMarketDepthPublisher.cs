@@ -42,7 +42,7 @@ namespace BinanceBot.Market
     /// </summary>
     public sealed class MarketDepthChangedEventArgs : EventArgs
     {
-        public MarketDepthChangedEventArgs(IEnumerable<Quote> asks, IEnumerable<Quote> bids, long updateTime)
+        public MarketDepthChangedEventArgs(List<Quote> asks, List<Quote> bids, long updateTime)
         {
             if (updateTime <= 0) ThrowHelper.ArgumentOutOfRangeException(nameof(updateTime));
 
@@ -52,9 +52,9 @@ namespace BinanceBot.Market
         }
 
 
-        public IEnumerable<Quote> Asks { get; }
+        public List<Quote> Asks { get; }
 
-        public IEnumerable<Quote> Bids { get; }
+        public List<Quote> Bids { get; }
 
         public long UpdateTime { get; }
     }

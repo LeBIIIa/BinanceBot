@@ -2,6 +2,7 @@
 using BinanceExchange.API.Helpers;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace BinanceBot.Market
 {
@@ -13,6 +14,11 @@ namespace BinanceBot.Market
         private readonly MarketStrategyConfiguration _marketStrategyConfig;
         private readonly ILogger<IMarketStrategy> _logger;
 
+        public NaiveMarketMakerStrategy(ILogger<IMarketStrategy> logger, IOptions<MarketStrategyConfiguration> marketStrategyConfig)
+        {
+            _marketStrategyConfig = marketStrategyConfig.Value;
+            _logger = logger;
+        }
 
         public NaiveMarketMakerStrategy(ILogger<IMarketStrategy> logger, MarketStrategyConfiguration marketStrategyConfig)
         {
@@ -26,21 +32,19 @@ namespace BinanceBot.Market
         /// </summary>
         /// <param name="marketPair">Best ask-bid pair</param>
         /// <returns>Recommended price-volume pair or <see langword="null"/></returns>
-        public Quote Process(MarketDepthPair marketPair)
+        public Quote? Process(MarketDepthPair marketPair)
         {
             if (marketPair == null)
                 ThrowHelper.ArgumentNullException(nameof(marketPair));
             if (!marketPair.IsFullPair)
                 return null;
 
+            Quote? quote = null;
 
-            Quote quote = null;
-
-
-            _logger.LogInformation($"Best ask / bid: {marketPair.Ask.Price} / {marketPair.Bid.Price}. Update Id: {marketPair.UpdateTime}.");
+            _logger.LogInformation($"Best ask / bid: {marketPair.Ask!.Price} / {marketPair.Bid!.Price}. Update Id: {marketPair.UpdateTime}.");
 
             // get price spreads (in percent)
-            decimal actualSpread = marketPair.PriceSpread.Value / marketPair.MediumPrice.Value * 100; // spread_relative = spread_absolute/price * 100
+            decimal actualSpread = marketPair.PriceSpread!.Value / marketPair.MediumPrice!.Value * 100; // spread_relative = spread_absolute/price * 100
             decimal expectedSpread = _marketStrategyConfig.TradeWhenSpreadGreaterThan;
 
             _logger.LogInformation($"Spread absolute / relative: {marketPair.PriceSpread} / {actualSpread:F3}%. Update Id: {marketPair.UpdateTime}.");
@@ -53,18 +57,16 @@ namespace BinanceBot.Market
                 decimal orderPrice = marketPair.Bid.Price + extra; // new_price = best_bid + extra
 
                 // compute order volume
-                decimal volumeSpread = marketPair.VolumeSpread.Value;
+                decimal volumeSpread = marketPair.VolumeSpread!.Value;
                 decimal orderVolume = volumeSpread > _marketStrategyConfig.MaxOrderVolume
                     ? _marketStrategyConfig.MaxOrderVolume // set max volume
                     : (volumeSpread < _marketStrategyConfig.MinOrderVolume
                         ? _marketStrategyConfig.MinOrderVolume // set min volume
                         : volumeSpread);
 
-
                 // return new price-volume pair
                 quote = new Quote(orderPrice, orderVolume, OrderSide.Buy);
             }
-
 
             return quote;
         }

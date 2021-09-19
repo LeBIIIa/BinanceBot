@@ -6,6 +6,8 @@ namespace BinanceExchange.API.Client
     public class BinanceClientConfiguration
     {
         public string BaseUrl { get; set; }
+        public string BaseWebsocketUrl { get; set; }
+        public string BaseWebsocketStreamUrl { get; set; }
         public string ApiKey { get; set; }
         public string SecretKey { get; set; }
         public bool EnableRateLimiting { get; set; }

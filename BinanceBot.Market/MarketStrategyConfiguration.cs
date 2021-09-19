@@ -7,7 +7,7 @@ namespace BinanceBot.Market
     /// </summary>
     /// <remarks>
     /// <see cref="MarketStrategyConfiguration"/> limits must not contradict Stock limits.
-    /// Binance limits: <see href="https://api.binance.com/api/v1/exchangeInfo"/>
+    /// Binance limits: <see href="https://api.binance.com/api/v3/exchangeInfo"/>
     /// </remarks>
     public class MarketStrategyConfiguration
     {
@@ -15,7 +15,6 @@ namespace BinanceBot.Market
         /// Start trading when spread greater than that values (in percentage point)
         /// </summary>
         public decimal TradeWhenSpreadGreaterThan { get; set; }
-
 
         #region Order limits
         /// <summary>
@@ -29,7 +28,6 @@ namespace BinanceBot.Market
         public decimal MaxOrderVolume { get; set; }
         #endregion
 
-
         #region Day limits (not usage now, but usefull in future)
         /// <summary>
         /// Minimal order volume
@@ -41,7 +39,6 @@ namespace BinanceBot.Market
         /// </summary>
         public decimal MaxVolumePerDay { get; set; }
         #endregion
-
 
         #region Behaviour settings (not usage now, but usefull in future)
         public bool CancelOrdersWhenStopping { get; set; } = true;

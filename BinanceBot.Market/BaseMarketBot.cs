@@ -23,7 +23,14 @@ namespace BinanceBot.Market
         protected readonly ILogger<IMarketBot> Logger;
         protected readonly IConfiguration Config;
 
-
+        protected BaseMarketBot(ILogger<IMarketBot> logger, IConfiguration config, TStrategy marketStrategy)
+        {
+            string symbol = config["CommonSettings:Symbol"];
+            Symbol = symbol ?? ThrowHelper.ArgumentNullException<string>(nameof(symbol));
+            MarketStrategy = marketStrategy ?? ThrowHelper.ArgumentNullException<TStrategy>(nameof(marketStrategy));
+            Logger = logger;
+            Config = config;
+        }
         protected BaseMarketBot(ILogger<IMarketBot> logger, IConfiguration config, string symbol, TStrategy marketStrategy)
         {
             Symbol = symbol ?? ThrowHelper.ArgumentNullException<string>(nameof(symbol));
@@ -44,11 +51,11 @@ namespace BinanceBot.Market
 
         public abstract Task ValidateConnectionAsync();
 
-        public abstract Task<IEnumerable<OrderResponse>> GetOpenedOrdersAsync(string symbol);
+        public abstract Task<List<OrderResponse>> GetOpenedOrdersAsync(string symbol);
 
-        public abstract Task CancelOrdersAsync(IEnumerable<OrderResponse> orders);
+        public abstract Task CancelOrdersAsync(List<OrderResponse> orders);
 
-        public abstract Task<BaseCreateOrderResponse> CreateOrderAsync(CreateOrderRequest order);
+        public abstract Task<BaseCreateOrderResponse?> CreateOrderAsync(CreateOrderRequest order);
 
 
         public abstract void Dispose();

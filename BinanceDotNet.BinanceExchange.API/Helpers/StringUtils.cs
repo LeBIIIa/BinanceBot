@@ -6,43 +6,60 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
+
+using static BinanceDotNet.BinanceExchange.API.Extensions.LinqExtensions;
 
 namespace BinanceDotNet.BinanceExchange.API.Helpers
 {
     internal static class StringUtils
     {
+        private enum SeparatedCaseState
+        {
+            Start,
+            Lower,
+            Upper,
+            NewWord
+        }
+
         public const string CarriageReturnLineFeed = "\r\n";
         public const string Empty = "";
         public const char CarriageReturn = '\r';
         public const char LineFeed = '\n';
         public const char Tab = '\t';
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsNullOrEmpty([NotNullWhen(false)] string? value)
         {
             return string.IsNullOrEmpty(value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string FormatWith(this string format, IFormatProvider provider, object? arg0)
         {
             return format.FormatWith(provider, new object?[] { arg0 });
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string FormatWith(this string format, IFormatProvider provider, object? arg0, object? arg1)
         {
             return format.FormatWith(provider, new object?[] { arg0, arg1 });
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string FormatWith(this string format, IFormatProvider provider, object? arg0, object? arg1, object? arg2)
         {
             return format.FormatWith(provider, new object?[] { arg0, arg1, arg2 });
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string FormatWith(this string format, IFormatProvider provider, object? arg0, object? arg1, object? arg2, object? arg3)
         {
             return format.FormatWith(provider, new object?[] { arg0, arg1, arg2, arg3 });
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static string FormatWith(this string format, IFormatProvider provider, params object?[] args)
         {
             // leave this a private to force code to use an explicit overload
@@ -59,6 +76,8 @@ namespace BinanceDotNet.BinanceExchange.API.Helpers
         /// <returns>
         /// 	<c>true</c> if the string is all white space; otherwise, <c>false</c>.
         /// </returns>
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsWhiteSpace(string s)
         {
             if (s == null)
@@ -82,14 +101,16 @@ namespace BinanceDotNet.BinanceExchange.API.Helpers
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static StringWriter CreateStringWriter(int capacity)
         {
             StringBuilder sb = new(capacity);
-            StringWriter sw = new (sb, CultureInfo.InvariantCulture);
+            StringWriter sw = new(sb, CultureInfo.InvariantCulture);
 
             return sw;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ToCharAsUnicode(char c, char[] buffer)
         {
             buffer[0] = '\\';
@@ -100,7 +121,8 @@ namespace BinanceDotNet.BinanceExchange.API.Helpers
             buffer[5] = MathUtils.IntToHex(c & '\x000f');
         }
 
-        public static TSource ForgivingCaseSensitiveFind<TSource>(this IEnumerable<TSource> source, Func<TSource, string> valueSelector, string testValue)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static TSource? ForgivingCaseSensitiveFind<TSource>(this List<TSource> source, Func<TSource, string> valueSelector, string testValue)
         {
             if (source == null)
             {
@@ -111,19 +133,30 @@ namespace BinanceDotNet.BinanceExchange.API.Helpers
                 ThrowHelper.ArgumentNullException(nameof(valueSelector));
             }
 
-            IEnumerable<TSource> caseInsensitiveResults = source.Where(s => string.Equals(valueSelector(s), testValue, StringComparison.OrdinalIgnoreCase));
-            if (caseInsensitiveResults.Count() <= 1)
+            List<TSource> caseInsensitiveResults = new(source.Count);
+            foreach (var s in source)
             {
-                return caseInsensitiveResults.SingleOrDefault();
+                if (string.Equals(valueSelector(s), testValue, StringComparison.OrdinalIgnoreCase))
+                    caseInsensitiveResults.Add(s);
+            }
+            if (caseInsensitiveResults.Count <= 1)
+            {
+                return caseInsensitiveResults.FirstOrDefault();
             }
             else
             {
                 // multiple results returned. now filter using case sensitivity
-                IEnumerable<TSource> caseSensitiveResults = source.Where(s => string.Equals(valueSelector(s), testValue, StringComparison.Ordinal));
-                return caseSensitiveResults.SingleOrDefault();
+                List<TSource> caseSensitiveResults = new(source.Count);
+                foreach (var s in source)
+                {
+                    if (string.Equals(valueSelector(s), testValue, StringComparison.Ordinal))
+                        caseSensitiveResults.Add(s);
+                }
+                return caseSensitiveResults.FirstOrDefault();
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string ToCamelCase(string s)
         {
             if (IsNullOrEmpty(s) || !char.IsUpper(s[0]))
@@ -165,23 +198,18 @@ namespace BinanceDotNet.BinanceExchange.API.Helpers
             return new string(chars);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static char ToLower(char c)
         {
             c = char.ToLowerInvariant(c);
             return c;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string ToSnakeCase(string s) => ToSeparatedCase(s, '_');
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string ToKebabCase(string s) => ToSeparatedCase(s, '-');
-
-        private enum SeparatedCaseState
-        {
-            Start,
-            Lower,
-            Upper,
-            NewWord
-        }
 
         private static string ToSeparatedCase(string s, char separator)
         {
@@ -248,26 +276,31 @@ namespace BinanceDotNet.BinanceExchange.API.Helpers
             return sb.ToString();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsHighSurrogate(char c)
         {
             return char.IsHighSurrogate(c);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsLowSurrogate(char c)
         {
             return char.IsLowSurrogate(c);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool StartsWith(this string source, char value)
         {
             return (source.Length > 0 && source[0] == value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool EndsWith(this string source, char value)
         {
             return (source.Length > 0 && source[^1] == value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string Trim(this string s, int start, int length)
         {
             // References: https://referencesource.microsoft.com/#mscorlib/system/string.cs,2691

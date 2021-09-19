@@ -1,15 +1,24 @@
 ﻿using BinanceExchange.API.Enums;
 
 using System.Collections.Generic;
-using System.Linq;
 
 namespace BinanceBot.Market.Utility
 {
     internal static class QuoteExtensions
     {
-        public static IEnumerable<Quote> ToQuotes(this IDictionary<decimal, decimal> source, OrderSide direction)
+        public static List<Quote> ToQuotes(this IDictionary<decimal, decimal> source, OrderSide direction)
         {
-            return source?.Select(s => new Quote(s.Key, s.Value, direction));
+            if (source != null)
+            {
+                List<Quote> result = new(source.Count);
+                foreach (var item in source)
+                {
+                    result.Add(new Quote(item.Key, item.Value, direction));
+                }
+                return result;
+            }
+            else
+                return new List<Quote>();
         }
     }
 }

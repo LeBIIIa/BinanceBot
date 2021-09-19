@@ -1,12 +1,13 @@
 ﻿using BinanceBot.Market.Utility;
 
+using BinanceDotNet.BinanceExchange.API.Extensions;
+
 using BinanceExchange.API.Enums;
 using BinanceExchange.API.Helpers;
 using BinanceExchange.API.Models.Response;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace BinanceBot.Market
 {
@@ -15,54 +16,15 @@ namespace BinanceBot.Market
     /// </summary>
     public class MarketDepth : IMarketDepthPublisher
     {
-        public MarketDepth(string symbol)
-        {
-            if (string.IsNullOrEmpty(symbol))
-                ThrowHelper.ArgumentException("Invalid symbol value", nameof(symbol));
+        //Market Depth events
+        public event EventHandler<MarketDepthChangedEventArgs>? MarketDepthChanged;
+        public event EventHandler<MarketBestPairChangedEventArgs>? MarketBestPairChanged;
 
-            Symbol = symbol;
-        }
-
+        // Update depth section
+        private const decimal IgnoreVolumeValue = 0.00000000M;
 
         public string Symbol { get; }
-
-
-        #region Ask section
-        private readonly IDictionary<decimal, decimal> _asks = new SortedDictionary<decimal, decimal>();
-
-        /// <summary>
-        /// Get prices that a seller is willing to receive a symbol.
-        /// Asks sorted by ascending price. The first (best) ask will be the minimum price.
-        /// </summary>
-        public IEnumerable<Quote> Asks => _asks.ToQuotes(OrderSide.Sell);
-
-        /// <summary>
-        /// The best ask. If the order book does not contain asks, will be returned <see langword="null"/>.
-        /// </summary>
-        public Quote BestAsk => Asks.FirstOrDefault();
-        #endregion
-
-
-        #region Bid section
-        private readonly IDictionary<decimal, decimal> _bids = new SortedDictionary<decimal, decimal>(new DescendingDecimalComparer());
-
-        /// <summary>
-        /// Get prices that a buyer is willing to pay for a symbol.
-        /// Bids sorted by descending price. The first (best) bid will be the maximum price.
-        /// </summary>
-        public IEnumerable<Quote> Bids => _bids.ToQuotes(OrderSide.Buy);
-
-        /// <summary>
-        /// The best bid. If the order book does not contain bids, will be returned <see langword="null"/>.
-        /// </summary>
-        public Quote BestBid => Bids.FirstOrDefault();
-        #endregion
-
-
-        /// <summary>
-        /// The best pair. If the order book is empty, will be returned <see langword="null"/>.
-        /// </summary>
-        public MarketDepthPair BestPair => LastUpdateTime.HasValue
+        public MarketDepthPair? BestPair => LastUpdateTime.HasValue
             ? new MarketDepthPair(BestAsk, BestBid, LastUpdateTime.Value)
             : null;
 
@@ -71,15 +33,47 @@ namespace BinanceBot.Market
         /// </summary>
         public long? LastUpdateTime { get; private set; }
 
+        #region Ask section
+        private readonly IDictionary<decimal, decimal> _asks = new SortedDictionary<decimal, decimal>();
 
+        /// <summary>
+        /// Get prices that a seller is willing to receive a symbol.
+        /// Asks sorted by ascending price. The first (best) ask will be the minimum price.
+        /// </summary>
+        public List<Quote> Asks => _asks.ToQuotes(OrderSide.Sell);
 
-        #region Update depth section
-        private const decimal IgnoreVolumeValue = 0.00000000M;
+        /// <summary>
+        /// The best ask. If the order book does not contain asks, will be returned <see langword="null"/>.
+        /// </summary>
+        public Quote? BestAsk => Asks.FirstOrDefault();
+        #endregion
+
+        #region Bid section
+        private readonly IDictionary<decimal, decimal> _bids = new SortedDictionary<decimal, decimal>(new DescendingDecimalComparer());
+
+        /// <summary>
+        /// Get prices that a buyer is willing to pay for a symbol.
+        /// Bids sorted by descending price. The first (best) bid will be the maximum price.
+        /// </summary>
+        public List<Quote> Bids => _bids.ToQuotes(OrderSide.Buy);
+
+        /// <summary>
+        /// The best bid. If the order book does not contain bids, will be returned <see langword="null"/>.
+        /// </summary>
+        public Quote? BestBid => Bids.FirstOrDefault();
+        #endregion
+
+        public MarketDepth(string? symbol)
+        {
+            if (string.IsNullOrEmpty(symbol))
+                ThrowHelper.ArgumentException("Invalid symbol value", nameof(symbol));
+            Symbol = symbol;
+        }
 
         /// <summary>
         /// Update market depth
         /// </summary>
-        public void UpdateDepth(IEnumerable<TradeResponse> asks, IEnumerable<TradeResponse> bids, long updateTime)
+        public void UpdateDepth(List<TradeResponse>? asks, List<TradeResponse>? bids, long updateTime)
         {
             if (updateTime <= 0)
                 ThrowHelper.ArgumentOutOfRangeException(nameof(updateTime));
@@ -88,7 +82,7 @@ namespace BinanceBot.Market
             if (updateTime <= LastUpdateTime) return;
             if (asks == null && bids == null) return;
 
-            static void UpdateOrderBook(IEnumerable<TradeResponse> updates, IDictionary<decimal, decimal> orders)
+            static void UpdateOrderBook(List<TradeResponse>? updates, IDictionary<decimal, decimal> orders)
             {
                 if (updates != null)
                 {
@@ -103,7 +97,7 @@ namespace BinanceBot.Market
             }
 
             // save prev BestPair to OnMarketBestPairChanged raise event
-            MarketDepthPair prevBestPair = BestPair;
+            MarketDepthPair prevBestPair = BestPair!;
             // update asks market depth
             UpdateOrderBook(asks, _asks);
             UpdateOrderBook(bids, _bids);
@@ -112,29 +106,19 @@ namespace BinanceBot.Market
 
             // raise events
             OnMarketDepthChanged(new MarketDepthChangedEventArgs(Asks, Bids, LastUpdateTime.Value));
-            if (!BestPair.Equals(prevBestPair))
+            if (!BestPair!.Equals(prevBestPair))
                 OnMarketBestPairChanged(new MarketBestPairChangedEventArgs(BestPair));
         }
-        #endregion
-
-
-        #region Market Depth events
-        public event EventHandler<MarketDepthChangedEventArgs> MarketDepthChanged;
 
         protected virtual void OnMarketDepthChanged(MarketDepthChangedEventArgs e)
         {
-            EventHandler<MarketDepthChangedEventArgs> handler = MarketDepthChanged;
+            EventHandler<MarketDepthChangedEventArgs>? handler = MarketDepthChanged;
             handler?.Invoke(this, e);
         }
-
-
-        public event EventHandler<MarketBestPairChangedEventArgs> MarketBestPairChanged;
-
         protected virtual void OnMarketBestPairChanged(MarketBestPairChangedEventArgs e)
         {
-            EventHandler<MarketBestPairChangedEventArgs> handler = MarketBestPairChanged;
+            EventHandler<MarketBestPairChangedEventArgs>? handler = MarketBestPairChanged;
             handler?.Invoke(this, e);
         }
-        #endregion
     }
 }

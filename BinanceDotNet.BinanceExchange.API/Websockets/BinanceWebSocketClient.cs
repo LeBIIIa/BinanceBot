@@ -2,9 +2,7 @@
 using BinanceExchange.API.Client;
 
 using Microsoft.Extensions.Logging;
-
-using System;
-using System.Collections.Generic;
+using Microsoft.Extensions.Options;
 
 using WebSocketSharp;
 
@@ -19,8 +17,8 @@ namespace BinanceExchange.API.Websockets
     {
         private bool disposedValue;
 
-        public BinanceWebSocketClient(ILogger<IBinanceWebSocketClient> logger) :
-            base(logger)
+        public BinanceWebSocketClient(IOptions<BinanceClientConfiguration> binanceConfig, ILogger<IBinanceWebSocketClient> logger, BinanceRestClient binanceRestClient) :
+            base(binanceConfig, logger, binanceRestClient)
         { }
 
         protected override void Dispose(bool disposing)

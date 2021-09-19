@@ -69,7 +69,7 @@ namespace BinanceExchange.API.Client
             _timestampOffset = time;
             _logger.Debug($"Timestamp offset is now : {time}");
         }
-        
+
         /// <summary>
         ///     Set the cache expiry time
         /// </summary>
@@ -214,11 +214,7 @@ namespace BinanceExchange.API.Client
         private Uri CreateValidUri(Uri endpoint, string secretKey, string signatureRawData, long receiveWindow)
         {
             string timestamp =
-#if NETSTANDARD2_0
-                DateTimeOffset.UtcNow.AddMilliseconds(_timestampOffset.TotalMilliseconds).ToUnixTimeMilliseconds().ToString();
-#else
-                DateTime.UtcNow.AddMilliseconds(_timestampOffset.TotalMilliseconds).ConvertToUnixTime().ToString();
-#endif
+            DateTime.UtcNow.AddMilliseconds(_timestampOffset.TotalMilliseconds).ConvertToUnixTime().ToString();
             var qsDataProvided = !string.IsNullOrEmpty(signatureRawData);
             var argEnding = $"timestamp={timestamp}&recvWindow={receiveWindow}";
             var adjustedSignature = !string.IsNullOrEmpty(signatureRawData)
@@ -288,7 +284,7 @@ namespace BinanceExchange.API.Client
                         .ContinueWith(taskFunction);
                     break;
                 case HttpVerb.POST:
-                    task = await HttpClient.PostAsync(endpoint, null)
+                    task = await HttpClient.PostAsync(endpoint, null!)
                         .ContinueWith(taskFunction);
                     break;
                 case HttpVerb.DELETE:
@@ -296,7 +292,7 @@ namespace BinanceExchange.API.Client
                         .ContinueWith(taskFunction);
                     break;
                 case HttpVerb.PUT:
-                    task = await HttpClient.PutAsync(endpoint, null)
+                    task = await HttpClient.PutAsync(endpoint, null!)
                         .ContinueWith(taskFunction);
                     break;
                 default:

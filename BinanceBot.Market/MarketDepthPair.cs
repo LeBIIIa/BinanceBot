@@ -9,7 +9,7 @@ namespace BinanceBot.Market
     /// </summary>
     public class MarketDepthPair
     {
-        public MarketDepthPair(Quote ask, Quote bid, long updateTime)
+        public MarketDepthPair(Quote? ask, Quote? bid, long updateTime)
         {
             if (updateTime <= 0)
                 ThrowHelper.ArgumentOutOfRangeException(nameof(updateTime));
@@ -19,20 +19,18 @@ namespace BinanceBot.Market
             UpdateTime = updateTime;
         }
 
+        public Quote? Ask { get; }
 
-        public Quote Ask { get; }
-
-        public Quote Bid { get; }
+        public Quote? Bid { get; }
 
         public long UpdateTime { get; }
 
-
         public bool IsFullPair => Ask != null && Bid != null;
 
-        public decimal? PriceSpread => IsFullPair ? Ask.Price - Bid.Price : default(decimal?);
+        public decimal? PriceSpread => IsFullPair ? Ask?.Price - Bid?.Price : default;
 
-        public decimal? VolumeSpread => IsFullPair ? Math.Abs(Ask.Volume - Bid.Volume) : default(decimal?);
+        public decimal? VolumeSpread => IsFullPair ? Math.Abs(Ask!.Volume - Bid!.Volume) : default;
 
-        public decimal? MediumPrice => IsFullPair ? (Ask.Price + Bid.Price) / 2 : default(decimal?);
+        public decimal? MediumPrice => IsFullPair ? (Ask?.Price + Bid?.Price) / 2 : default;
     }
 }

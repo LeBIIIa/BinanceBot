@@ -30,7 +30,7 @@ namespace BinanceExchange.API.Client
             _apiKey = "";
             _secretKey = "";
         }
-        
+
         /// <summary>
         /// Set api & secret keys
         /// </summary>

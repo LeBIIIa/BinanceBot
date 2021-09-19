@@ -5,6 +5,7 @@ using BinanceExchange.API.Models.WebSocket.Interfaces;
 using BinanceExchange.API.Utility;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Newtonsoft.Json;
 
@@ -23,6 +24,7 @@ namespace BinanceExchange.API.Websockets
     {
         private bool disposedValue;
         private readonly ILogger<IBinanceWebSocketClient> _logger;
+        private readonly BinanceRestClient _binanceRestClient;
         private SslProtocols SupportedProtocols { get; } = SslProtocols.Tls12 | SslProtocols.Tls11 | SslProtocols.Tls;
 
         /// <summary>
@@ -34,10 +36,14 @@ namespace BinanceExchange.API.Websockets
         /// <summary>
         ///     Base WebSocket URI for Binance API
         /// </summary>
-        private readonly string BaseWebsocketUri = "wss://stream.binance.com:9443/ws";
+        private readonly string BaseWebsocketUri;
 
-        protected AbstractBinanceWebSocketClient(ILogger<IBinanceWebSocketClient> logger)
+        protected AbstractBinanceWebSocketClient(IOptions<BinanceClientConfiguration> binanceConfig, ILogger<IBinanceWebSocketClient> logger, BinanceRestClient binanceRestClient)
         {
+            string uri = binanceConfig.Value.BaseWebsocketUrl;
+            Guard.AgainstNullOrEmpty(uri);
+            BaseWebsocketUri = uri;
+            _binanceRestClient = binanceRestClient;
             _logger = logger;
         }
 
